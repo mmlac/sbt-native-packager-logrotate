@@ -29,7 +29,7 @@ object LogRotate extends AutoPlugin with LinuxMappingDSL {
     val logrotateScriptFile   = SettingKey[File](
       "logrotate-script-directory",
       "File that is storing the logrotate config for this application, " +
-      "by default 'src/linux/logrotate.conf'")
+        "by default 'src/linux/logrotate.conf'")
 
     val logrotateReplacements = SettingKey[Seq[(String, String)]](
       "logrotate-replacements",
@@ -47,9 +47,9 @@ object LogRotate extends AutoPlugin with LinuxMappingDSL {
 
     logrotateParseConfig <<= (logrotateScriptFile, logrotateReplacements, target in Compile) map { (file, replace, target) =>
       file.exists match {
-        case true  => parseTemplate(file, replace, target)
+        case true  => parseTemplate(IO.readLines(file), replace, target)
         // getClass getPackage is null. :|
-        case false => parseTemplate(IO.asFile (getClass getResource "logrotate.conf"), replace, target)
+        case false => parseTemplate(IO.readLinesURL(getClass getResource "logrotate.conf"), replace, target)
 
       }
     },
@@ -59,8 +59,8 @@ object LogRotate extends AutoPlugin with LinuxMappingDSL {
     }
   )
 
-  private final def parseTemplate(file : File, replacements : Seq[(String, String)], target : File) : File = {
-    val template = TemplateWriter.generateScriptFromLines(IO.readLines(file), replacements)
+  private final def parseTemplate(file : Seq[String], replacements : Seq[(String, String)], target : File) : File = {
+    val template = TemplateWriter.generateScriptFromLines(file, replacements)
     val script = target / "tmp" / "logrotate" / "logrotate.conf"
     IO.writeLines(script, template)
     script
